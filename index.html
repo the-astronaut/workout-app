@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Workout Tracker</title>
 
@@ -11,7 +11,6 @@
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
 </head>
 
 <body class="bg-gray-100">
@@ -24,90 +23,183 @@ if ("serviceWorker" in navigator) {
 </script>
 
 <script type="text/babel">
+
 const { useState, useEffect } = React;
 
-function App() {
-  const [workouts, setWorkouts] = useState(
-    JSON.parse(localStorage.getItem("workouts")) || []
-  );
-  const [name, setName] = useState("");
-  const [sets, setSets] = useState([]);
+const MUSCLES = ["Chest","Back","Legs","Shoulders","Arms","Core","Cardio"];
 
-  useEffect(() => {
-    localStorage.setItem("workouts", JSON.stringify(workouts));
-  }, [workouts]);
+function App(){
 
-  function addSet() {
-    setSets([...sets, { reps: "", weight: "" }]);
-  }
+const [tab,setTab]=useState("home");
+const [workouts,setWorkouts]=useState(JSON.parse(localStorage.getItem("workouts"))||[]);
+const [history,setHistory]=useState(JSON.parse(localStorage.getItem("history"))||[]);
+const [active,setActive]=useState(null);
 
-  function saveWorkout() {
-    if (!name) return;
-    setWorkouts([...workouts, { id: Date.now(), name, sets }]);
-    setName("");
-    setSets([]);
-  }
+useEffect(()=>localStorage.setItem("workouts",JSON.stringify(workouts)),[workouts]);
+useEffect(()=>localStorage.setItem("history",JSON.stringify(history)),[history]);
 
-  return (
-    <div className="p-4 max-w-lg mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-center">Workout Tracker</h1>
-
-      <div className="bg-white p-4 rounded shadow mb-6">
-        <input
-          placeholder="Workout name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full border p-2 rounded mb-3"
-        />
-
-        {sets.map((s, i) => (
-          <div key={i} className="flex gap-2 mb-2">
-            <input
-              placeholder="Reps"
-              className="border p-2 w-1/2"
-              onChange={(e) => {
-                const updated = [...sets];
-                updated[i].reps = e.target.value;
-                setSets(updated);
-              }}
-            />
-            <input
-              placeholder="Weight"
-              className="border p-2 w-1/2"
-              onChange={(e) => {
-                const updated = [...sets];
-                updated[i].weight = e.target.value;
-                setSets(updated);
-              }}
-            />
-          </div>
-        ))}
-
-        <button
-          onClick={addSet}
-          className="bg-blue-500 text-white px-3 py-2 rounded mr-2"
-        >
-          Add Set
-        </button>
-
-        <button
-          onClick={saveWorkout}
-          className="bg-green-600 text-white px-3 py-2 rounded"
-        >
-          Save Workout
-        </button>
-      </div>
-
-      {workouts.map((w) => (
-        <div key={w.id} className="bg-white p-4 rounded shadow mb-3">
-          <div className="font-bold">{w.name}</div>
-        </div>
-      ))}
-    </div>
-  );
+// ---------- ANALYTICS ----------
+function getPBs(){
+ let pb={};
+ history.forEach(w=>w.exercises.forEach(ex=>ex.sets.forEach(s=>{
+  let wgt=Number(s.weight);
+  if(!pb[ex.name]||wgt>pb[ex.name]) pb[ex.name]=wgt;
+ })));
+ return pb;
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+function getMuscleSets(){
+ let totals={};
+ history.forEach(w=>w.exercises.forEach(ex=>{
+  totals[ex.muscle]=(totals[ex.muscle]||0)+ex.sets.length;
+ }));
+ return totals;
+}
+
+// ---------- WORKOUT FLOW ----------
+function startWorkout(w){
+ const copy=JSON.parse(JSON.stringify(w));
+ copy.currentEx=0;
+ copy.currentSet=0;
+ setActive(copy);
+ setTab("workout");
+}
+
+function logSet(){
+ const ex=active.exercises[active.currentEx];
+ active.currentSet++;
+
+ if(active.currentSet>=ex.sets.length){
+  active.currentEx++;
+  active.currentSet=0;
+ }
+
+ if(active.currentEx>=active.exercises.length){
+  finishWorkout();
+ }else{
+  setActive({...active});
+ }
+}
+
+function finishWorkout(){
+ setHistory([...history,{...active,date:Date.now()}]);
+ setActive(null);
+ setTab("home");
+}
+
+// ---------- UI ----------
+
+// ===== ACTIVE WORKOUT =====
+if(tab==="workout"&&active){
+ const ex=active.exercises[active.currentEx];
+ const set=ex.sets[active.currentSet];
+
+ return(
+  <div className="p-4">
+   <h2 className="text-xl font-bold mb-2">{active.name}</h2>
+
+   <div className="bg-white p-4 rounded shadow">
+    <h3 className="font-bold">{ex.name}</h3>
+
+    <input value={set.reps}
+      className="border p-2 w-full my-2"
+      onChange={e=>set.reps=e.target.value}/>
+
+    <input value={set.weight}
+      className="border p-2 w-full"
+      onChange={e=>set.weight=e.target.value}/>
+
+    <button onClick={logSet}
+      className="bg-green-600 text-white p-3 mt-4 w-full rounded">
+      Log Set
+    </button>
+   </div>
+  </div>
+ );
+}
+
+// ===== CREATE =====
+if(tab==="create"){
+ const [draft,setDraft]=useState({name:"",exercises:[]});
+
+ function addExercise(){
+  draft.exercises.push({name:"",muscle:"Chest",sets:[{reps:"",weight:""}]});
+  setDraft({...draft});
+ }
+
+ function save(){
+  setWorkouts([...workouts,{...draft,id:Date.now()}]);
+  setTab("home");
+ }
+
+ return(
+  <div className="p-4">
+   <input placeholder="Workout name"
+     className="border p-2 w-full mb-4"
+     onChange={e=>draft.name=e.target.value}/>
+
+   {draft.exercises.map((ex,i)=>(
+    <div key={i} className="bg-white p-3 mb-3 rounded">
+     <input placeholder="Exercise"
+      className="border p-2 w-full"
+      onChange={e=>ex.name=e.target.value}/>
+
+     <select className="border p-2 w-full mt-2"
+      onChange={e=>ex.muscle=e.target.value}>
+      {MUSCLES.map(m=><option key={m}>{m}</option>)}
+     </select>
+    </div>
+   ))}
+
+   <button onClick={addExercise} className="bg-blue-500 text-white p-3 w-full mb-3 rounded">Add Exercise</button>
+   <button onClick={save} className="bg-green-600 text-white p-3 w-full rounded">Save Workout</button>
+  </div>
+ );
+}
+
+// ===== ANALYTICS =====
+if(tab==="analytics"){
+ const pb=getPBs();
+ const ms=getMuscleSets();
+
+ return(
+  <div className="p-4">
+   <h2 className="text-2xl font-bold mb-4">Analytics</h2>
+
+   <div className="bg-white p-4 mb-4 rounded">
+    <h3 className="font-bold">Personal Bests</h3>
+    {Object.entries(pb).map(([e,w])=><div key={e}>{e} — {w}kg</div>)}
+   </div>
+
+   <div className="bg-white p-4 rounded">
+    <h3 className="font-bold">Sets per Muscle</h3>
+    {Object.entries(ms).map(([m,s])=><div key={m}>{m} — {s}</div>)}
+   </div>
+  </div>
+ );
+}
+
+// ===== HOME =====
+return(
+ <div className="p-4">
+  <h1 className="text-3xl font-bold mb-4">Workout Tracker</h1>
+
+  {workouts.map(w=>(
+   <div key={w.id} className="bg-white p-3 mb-3 rounded shadow">
+    <div className="font-bold">{w.name}</div>
+    <button onClick={()=>startWorkout(w)}
+      className="bg-green-600 text-white p-2 mt-2 rounded">Start</button>
+   </div>
+  ))}
+
+  <button onClick={()=>setTab("create")} className="bg-blue-600 text-white p-3 w-full mt-4 rounded">Create Workout</button>
+  <button onClick={()=>setTab("analytics")} className="bg-purple-600 text-white p-3 w-full mt-2 rounded">Analytics</button>
+ </div>
+);
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+
 </script>
 </body>
 </html>
