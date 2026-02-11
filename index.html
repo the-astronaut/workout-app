@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Workout Tracker</title>
+
+<link rel="manifest" href="manifest.json"/>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+</head>
+
+<body class="bg-gray-100">
+<div id="root"></div>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+function App() {
+  const [workouts, setWorkouts] = useState(
+    JSON.parse(localStorage.getItem("workouts")) || []
+  );
+  const [name, setName] = useState("");
+  const [sets, setSets] = useState([]);
+
+  useEffect(() => {
+    localStorage.setItem("workouts", JSON.stringify(workouts));
+  }, [workouts]);
+
+  function addSet() {
+    setSets([...sets, { reps: "", weight: "" }]);
+  }
+
+  function saveWorkout() {
+    if (!name) return;
+    setWorkouts([...workouts, { id: Date.now(), name, sets }]);
+    setName("");
+    setSets([]);
+  }
+
+  return (
+    <div className="p-4 max-w-lg mx-auto">
+      <h1 className="text-3xl font-bold mb-6 text-center">Workout Tracker</h1>
+
+      <div className="bg-white p-4 rounded shadow mb-6">
+        <input
+          placeholder="Workout name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full border p-2 rounded mb-3"
+        />
+
+        {sets.map((s, i) => (
+          <div key={i} className="flex gap-2 mb-2">
+            <input
+              placeholder="Reps"
+              className="border p-2 w-1/2"
+              onChange={(e) => {
+                const updated = [...sets];
+                updated[i].reps = e.target.value;
+                setSets(updated);
+              }}
+            />
+            <input
+              placeholder="Weight"
+              className="border p-2 w-1/2"
+              onChange={(e) => {
+                const updated = [...sets];
+                updated[i].weight = e.target.value;
+                setSets(updated);
+              }}
+            />
+          </div>
+        ))}
+
+        <button
+          onClick={addSet}
+          className="bg-blue-500 text-white px-3 py-2 rounded mr-2"
+        >
+          Add Set
+        </button>
+
+        <button
+          onClick={saveWorkout}
+          className="bg-green-600 text-white px-3 py-2 rounded"
+        >
+          Save Workout
+        </button>
+      </div>
+
+      {workouts.map((w) => (
+        <div key={w.id} className="bg-white p-4 rounded shadow mb-3">
+          <div className="font-bold">{w.name}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
