@@ -1,205 +1,183 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Workout Tracker</title>
 
-<link rel="manifest" href="manifest.json"/>
-
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+body { font-family: Arial; margin:0; background:#111; color:white }
+header { padding:15px; background:#222; text-align:center }
+button { padding:12px; margin:5px; border:none; background:#4CAF50; color:white; border-radius:8px }
+.card { background:#222; margin:10px; padding:15px; border-radius:10px }
+input, select { width:100%; padding:10px; margin:5px 0 }
+.nav { position:fixed; bottom:0; width:100%; background:#222; display:flex }
+.nav button { flex:1; background:#333 }
+.hidden { display:none }
+.setRow { display:flex; gap:5px }
+.setRow input { flex:1 }
+.timer { font-size:24px; text-align:center; margin:10px }
+</style>
 </head>
 
-<body class="bg-gray-100">
-<div id="root"></div>
+<body>
+
+<header id="title">Home</header>
+
+<div id="home"></div>
+<div id="create" class="hidden"></div>
+<div id="tracker" class="hidden"></div>
+<div id="analytics" class="hidden"></div>
+
+<div class="nav">
+<button onclick="show('home')">Home</button>
+<button onclick="show('create')">Create</button>
+<button onclick="showAnalytics()">Analytics</button>
+</div>
 
 <script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js");
-}
-</script>
 
-<script type="text/babel">
+let workouts = JSON.parse(localStorage.getItem("workouts")||"[]");
+let exercises = JSON.parse(localStorage.getItem("exercises")||"[]");
+let history = JSON.parse(localStorage.getItem("history")||"[]");
 
-const { useState, useEffect } = React;
-
-const MUSCLES = ["Chest","Back","Legs","Shoulders","Arms","Core","Cardio"];
-
-function App(){
-
-const [tab,setTab]=useState("home");
-const [workouts,setWorkouts]=useState(JSON.parse(localStorage.getItem("workouts"))||[]);
-const [history,setHistory]=useState(JSON.parse(localStorage.getItem("history"))||[]);
-const [active,setActive]=useState(null);
-
-useEffect(()=>localStorage.setItem("workouts",JSON.stringify(workouts)),[workouts]);
-useEffect(()=>localStorage.setItem("history",JSON.stringify(history)),[history]);
-
-// ---------- ANALYTICS ----------
-function getPBs(){
- let pb={};
- history.forEach(w=>w.exercises.forEach(ex=>ex.sets.forEach(s=>{
-  let wgt=Number(s.weight);
-  if(!pb[ex.name]||wgt>pb[ex.name]) pb[ex.name]=wgt;
- })));
- return pb;
+function save(){
+ localStorage.setItem("workouts",JSON.stringify(workouts));
+ localStorage.setItem("exercises",JSON.stringify(exercises));
+ localStorage.setItem("history",JSON.stringify(history));
 }
 
-function getMuscleSets(){
+function show(page){
+ document.querySelectorAll("div[id]").forEach(d=>d.classList.add("hidden"));
+ document.getElementById(page).classList.remove("hidden");
+ document.getElementById("title").innerText=page.toUpperCase();
+
+ if(page=="home") renderHome();
+ if(page=="create") renderCreate();
+}
+
+function renderHome(){
+ let d=document.getElementById("home");
+ d.innerHTML=`<button onclick="addExercise()">Add Exercise</button>`;
+ workouts.forEach((w,i)=>{
+   d.innerHTML+=`
+   <div class="card">
+     <b>${w.name}</b><br>
+     <button onclick="startWorkout(${i})">Start</button>
+     <button onclick="deleteWorkout(${i})">Delete</button>
+   </div>`;
+ });
+}
+
+function deleteWorkout(i){
+ workouts.splice(i,1); save(); renderHome();
+}
+
+function renderCreate(){
+ let d=document.getElementById("create");
+ d.innerHTML=`
+ <input id="wname" placeholder="Workout name">
+ <button onclick="createWorkout()">Create Workout</button>
+ <h3>Exercise Library</h3>
+ `;
+
+ exercises.forEach((e,i)=>{
+   d.innerHTML+=`
+   <div class="card">
+     ${e.name} (${e.group})
+     <button onclick="deleteExercise(${i})">Delete</button>
+   </div>`;
+ });
+}
+
+function createWorkout(){
+ let name=document.getElementById("wname").value;
+ if(!name) return alert("Enter name");
+
+ workouts.push({name, exercises:[]});
+ save();
+ renderHome();
+ show("home");
+}
+
+function deleteExercise(i){
+ exercises.splice(i,1); save(); renderCreate();
+}
+
+function addExercise(){
+ let name=prompt("Exercise name");
+ if(!name) return;
+ let group=prompt("Muscle group?");
+ exercises.push({name,group});
+ save();
+ renderCreate();
+}
+
+function startWorkout(i){
+ let w=workouts[i];
+ let d=document.getElementById("tracker");
+ d.innerHTML=`<h2>${w.name}</h2><div id="timer" class="timer"></div>`;
+
+ exercises.forEach((ex)=>{
+   d.innerHTML+=`
+   <div class="card">
+     <b>${ex.name}</b>
+     <div id="sets-${ex.name}"></div>
+     <button onclick="addSet('${ex.name}')">Add Set</button>
+   </div>`;
+ });
+
+ show("tracker");
+}
+
+function addSet(name){
+ let container=document.getElementById("sets-"+name);
+ let div=document.createElement("div");
+ div.className="setRow";
+ div.innerHTML=`
+ <input placeholder="Reps">
+ <input placeholder="Weight">
+ <button onclick="restTimer()">✓</button>
+ `;
+ container.appendChild(div);
+}
+
+let restInterval;
+function restTimer(){
+ let time=60;
+ let t=document.getElementById("timer");
+ t.innerText=time;
+
+ clearInterval(restInterval);
+ restInterval=setInterval(()=>{
+   time--;
+   t.innerText=time;
+   if(time<=0) clearInterval(restInterval);
+ },1000);
+}
+
+function showAnalytics(){
+ show("analytics");
+ let d=document.getElementById("analytics");
+
  let totals={};
- history.forEach(w=>w.exercises.forEach(ex=>{
-  totals[ex.muscle]=(totals[ex.muscle]||0)+ex.sets.length;
- }));
- return totals;
-}
 
-// ---------- WORKOUT FLOW ----------
-function startWorkout(w){
- const copy=JSON.parse(JSON.stringify(w));
- copy.currentEx=0;
- copy.currentSet=0;
- setActive(copy);
- setTab("workout");
-}
+ exercises.forEach(e=>totals[e.group]=0);
 
-function logSet(){
- const ex=active.exercises[active.currentEx];
- active.currentSet++;
+ history.forEach(h=>{
+   totals[h.group]+=h.sets;
+ });
 
- if(active.currentSet>=ex.sets.length){
-  active.currentEx++;
-  active.currentSet=0;
- }
+ d.innerHTML="<h2>Sets per muscle</h2>";
 
- if(active.currentEx>=active.exercises.length){
-  finishWorkout();
- }else{
-  setActive({...active});
+ for(let g in totals){
+   d.innerHTML+=`<div class="card">${g}: ${totals[g]}</div>`;
  }
 }
 
-function finishWorkout(){
- setHistory([...history,{...active,date:Date.now()}]);
- setActive(null);
- setTab("home");
-}
-
-// ---------- UI ----------
-
-// ===== ACTIVE WORKOUT =====
-if(tab==="workout"&&active){
- const ex=active.exercises[active.currentEx];
- const set=ex.sets[active.currentSet];
-
- return(
-  <div className="p-4">
-   <h2 className="text-xl font-bold mb-2">{active.name}</h2>
-
-   <div className="bg-white p-4 rounded shadow">
-    <h3 className="font-bold">{ex.name}</h3>
-
-    <input value={set.reps}
-      className="border p-2 w-full my-2"
-      onChange={e=>set.reps=e.target.value}/>
-
-    <input value={set.weight}
-      className="border p-2 w-full"
-      onChange={e=>set.weight=e.target.value}/>
-
-    <button onClick={logSet}
-      className="bg-green-600 text-white p-3 mt-4 w-full rounded">
-      Log Set
-    </button>
-   </div>
-  </div>
- );
-}
-
-// ===== CREATE =====
-if(tab==="create"){
- const [draft,setDraft]=useState({name:"",exercises:[]});
-
- function addExercise(){
-  draft.exercises.push({name:"",muscle:"Chest",sets:[{reps:"",weight:""}]});
-  setDraft({...draft});
- }
-
- function save(){
-  setWorkouts([...workouts,{...draft,id:Date.now()}]);
-  setTab("home");
- }
-
- return(
-  <div className="p-4">
-   <input placeholder="Workout name"
-     className="border p-2 w-full mb-4"
-     onChange={e=>draft.name=e.target.value}/>
-
-   {draft.exercises.map((ex,i)=>(
-    <div key={i} className="bg-white p-3 mb-3 rounded">
-     <input placeholder="Exercise"
-      className="border p-2 w-full"
-      onChange={e=>ex.name=e.target.value}/>
-
-     <select className="border p-2 w-full mt-2"
-      onChange={e=>ex.muscle=e.target.value}>
-      {MUSCLES.map(m=><option key={m}>{m}</option>)}
-     </select>
-    </div>
-   ))}
-
-   <button onClick={addExercise} className="bg-blue-500 text-white p-3 w-full mb-3 rounded">Add Exercise</button>
-   <button onClick={save} className="bg-green-600 text-white p-3 w-full rounded">Save Workout</button>
-  </div>
- );
-}
-
-// ===== ANALYTICS =====
-if(tab==="analytics"){
- const pb=getPBs();
- const ms=getMuscleSets();
-
- return(
-  <div className="p-4">
-   <h2 className="text-2xl font-bold mb-4">Analytics</h2>
-
-   <div className="bg-white p-4 mb-4 rounded">
-    <h3 className="font-bold">Personal Bests</h3>
-    {Object.entries(pb).map(([e,w])=><div key={e}>{e} — {w}kg</div>)}
-   </div>
-
-   <div className="bg-white p-4 rounded">
-    <h3 className="font-bold">Sets per Muscle</h3>
-    {Object.entries(ms).map(([m,s])=><div key={m}>{m} — {s}</div>)}
-   </div>
-  </div>
- );
-}
-
-// ===== HOME =====
-return(
- <div className="p-4">
-  <h1 className="text-3xl font-bold mb-4">Workout Tracker</h1>
-
-  {workouts.map(w=>(
-   <div key={w.id} className="bg-white p-3 mb-3 rounded shadow">
-    <div className="font-bold">{w.name}</div>
-    <button onClick={()=>startWorkout(w)}
-      className="bg-green-600 text-white p-2 mt-2 rounded">Start</button>
-   </div>
-  ))}
-
-  <button onClick={()=>setTab("create")} className="bg-blue-600 text-white p-3 w-full mt-4 rounded">Create Workout</button>
-  <button onClick={()=>setTab("analytics")} className="bg-purple-600 text-white p-3 w-full mt-2 rounded">Analytics</button>
- </div>
-);
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+renderHome();
 
 </script>
 </body>
 </html>
+
+
