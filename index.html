@@ -3,279 +3,292 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlexLog Pro | Elite Tracker</title>
+    <title>FlexFlow | Pro Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary: #3b82f6;
-            --secondary: #10b981;
-            --danger: #ef4444;
-            --dark: #0f172a;
-            --bg: #f1f5f9;
-            --card: #ffffff;
+            --primary: #3b82f6; --bg: #0f172a; --card: #1e293b;
+            --text: #f8fafc; --text-dim: #94a3b8; --accent: #10b981;
         }
-
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--dark);
-            margin: 0;
-            padding: 15px;
-            padding-bottom: 80px; /* Space for fixed timer */
+            font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text);
+            margin: 0; padding-bottom: 80px;
         }
+        .container { padding: 20px; max-width: 600px; margin: 0 auto; }
+        .screen { display: none; }
+        .screen.active { display: block; }
 
-        .container { max-width: 600px; margin: 0 auto; }
-
-        .header { text-align: center; padding: 20px 0; }
-        .header h1 { margin: 0; color: var(--primary); font-size: 2rem; }
-
-        .card {
-            background: var(--card);
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        /* Navigation */
+        .nav {
+            position: fixed; bottom: 0; width: 100%; background: var(--card);
+            display: flex; justify-content: space-around; padding: 15px 0;
+            border-top: 1px solid #334155; z-index: 100;
         }
+        .nav-item { color: var(--text-dim); text-decoration: none; font-size: 0.8rem; cursor: pointer; text-align: center; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
 
-        h2 { margin-top: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
-
-        .input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        /* Components */
+        .card { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+        .btn {
+            background: var(--primary); color: white; border: none; padding: 12px;
+            border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;
+        }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn-danger { background: #ef4444; }
         
         input, select {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 1rem;
-            box-sizing: border-box;
-            transition: border-color 0.2s;
+            background: #334155; border: 1px solid #475569; color: white;
+            padding: 10px; border-radius: 6px; width: 100%; box-sizing: border-box; margin: 5px 0;
         }
 
-        input:focus { border-color: var(--primary); outline: none; }
-
-        button {
-            width: 100%;
-            padding: 14px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 700;
-            cursor: pointer;
-            margin-top: 10px;
+        .exercise-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #334155; }
+        .set-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 5px; }
+        
+        /* Timer Overlay */
+        #timer-overlay {
+            position: fixed; top: 20px; right: 20px; background: var(--accent);
+            padding: 10px 20px; border-radius: 50px; font-weight: bold; display: none;
         }
-
-        /* Stats & Logs */
-        .log-item {
-            padding: 15px;
-            border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .badge {
-            font-size: 0.7rem;
-            background: #e2e8f0;
-            padding: 2px 8px;
-            border-radius: 10px;
-            text-transform: uppercase;
-        }
-
-        /* Floating Timer Bar */
-        .timer-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--dark);
-            color: white;
-            padding: 15px;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.2);
-            z-index: 100;
-        }
-
-        .timer-display { font-family: monospace; font-size: 1.5rem; color: var(--secondary); }
-        .timer-btn { width: auto; padding: 8px 15px; margin: 0; font-size: 0.8rem; background: #334155; }
-
-        /* PR Dashboard */
-        .pr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .pr-card { background: #eff6ff; padding: 10px; border-radius: 8px; border-left: 4px solid var(--primary); }
-        .pr-val { font-weight: 800; font-size: 1.1rem; color: var(--primary); }
     </style>
 </head>
 <body>
 
+<div id="timer-overlay">Rest: <span id="timer-val">60</span>s</div>
+
 <div class="container">
-    <div class="header">
-        <h1>⚡ FlexLog <span style="font-weight: 300;">Pro</span></h1>
-    </div>
-
-    <div class="card">
-        <h2>🏆 Top Records</h2>
-        <div id="prList" class="pr-grid">
-            <p style="color: #94a3b8; font-size: 0.8rem;">Log exercises to see your PRs here.</p>
+    <div id="screen-home" class="screen active">
+        <h1>Welcome Back</h1>
+        <div class="card">
+            <h3>🏆 Personal Bests</h3>
+            <div id="pb-list"></div>
         </div>
+        <h3>Select Workout</h3>
+        <div id="home-workout-list"></div>
     </div>
 
-    <div class="card">
-        <h2>➕ Log Set</h2>
-        <input type="text" id="exercise" placeholder="Exercise Name..." list="common-exercises">
-        <datalist id="common-exercises">
-            <option value="Bench Press">
-            <option value="Squat">
-            <option value="Deadlift">
-            <option value="Overhead Press">
-            <option value="Bicep Curls">
-        </datalist>
-        
-        <div class="input-group">
-            <input type="number" id="weight" placeholder="Weight">
-            <input type="number" id="reps" placeholder="Reps">
+    <div id="screen-workouts" class="screen">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+            <h1>My Workouts</h1>
+            <button class="btn" style="width: auto;" onclick="showEditor()">+ New</button>
         </div>
-        
-        <select id="category">
-            <option value="Strength">Strength</option>
-            <option value="Hypertrophy">Hypertrophy</option>
-            <option value="Endurance">Endurance</option>
-        </select>
-        
-        <button onclick="addLog()">LOG SET & START TIMER</button>
+        <div id="workout-list"></div>
     </div>
 
-    <div class="card">
-        <h2>📅 Recent History</h2>
-        <div id="history"></div>
+    <div id="screen-editor" class="screen">
+        <h1 id="editor-title">Create Workout</h1>
+        <input type="text" id="edit-workout-name" placeholder="Workout Name (e.g. Leg Day)">
+        <div id="editor-exercises"></div>
+        <button class="btn btn-outline" onclick="addExerciseToEditor()">+ Add Exercise</button>
+        <button class="btn" style="margin-top: 20px;" onclick="saveWorkout()">Save Workout</button>
+        <button class="btn btn-danger" style="margin-top: 10px;" onclick="changeScreen('workouts')">Cancel</button>
+    </div>
+
+    <div id="screen-session" class="screen">
+        <h1 id="session-name">Workout</h1>
+        <div id="session-content"></div>
+        <button class="btn" style="background: var(--accent);" onclick="finishWorkout()">Finish Workout</button>
+    </div>
+
+    <div id="screen-stats" class="screen">
+        <h1>Analytics</h1>
+        <div class="card">
+            <canvas id="statsChart"></canvas>
+        </div>
+        <div id="history-logs"></div>
     </div>
 </div>
 
-<div class="timer-bar">
-    <div>REST: <span class="timer-display" id="timerDisplay">00:00</span></div>
-    <div style="display: flex; gap: 5px;">
-        <button class="timer-btn" onclick="startTimer(60)">+60s</button>
-        <button class="timer-btn" onclick="resetTimer()" style="background:var(--danger)">Reset</button>
-    </div>
-</div>
+<nav class="nav">
+    <div class="nav-item active" onclick="changeScreen('home')">🏠<br>Home</div>
+    <div class="nav-item" onclick="changeScreen('workouts')">🏋️<br>Workouts</div>
+    <div class="nav-item" onclick="changeScreen('stats')">📊<br>Stats</div>
+</nav>
 
 <script>
-    let timerInterval;
-    let timeLeft = 0;
+    // --- DATA STATE ---
+    let workouts = JSON.parse(localStorage.getItem('fx_workouts')) || [];
+    let logs = JSON.parse(localStorage.getItem('fx_logs')) || [];
+    let pbs = JSON.parse(localStorage.getItem('fx_pbs')) || {};
+    let currentEditingId = null;
 
-    document.addEventListener('DOMContentLoaded', () => {
-        renderLogs();
-        renderPRs();
-    });
+    const muscleGroups = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core"];
 
-    function addLog() {
-        const exercise = document.getElementById('exercise').value.trim();
-        const weight = parseFloat(document.getElementById('weight').value);
-        const reps = parseInt(document.getElementById('reps').value);
-        const category = document.getElementById('category').value;
-
-        if (!exercise || isNaN(weight) || isNaN(reps)) {
-            alert("Fill out the specs, Champ!");
-            return;
-        }
-
-        const log = {
-            id: Date.now(),
-            exercise, weight, reps, category,
-            date: new Date().toLocaleDateString()
-        };
-
-        const logs = JSON.parse(localStorage.getItem('pro_logs')) || [];
-        logs.unshift(log);
-        localStorage.setItem('pro_logs', JSON.stringify(logs));
-
-        renderLogs();
-        renderPRs();
-        startTimer(90); // Default 90s rest after a set
+    // --- NAVIGATION ---
+    function changeScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(`screen-${screenId}`).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         
-        // Reset inputs but keep exercise name for next set
-        document.getElementById('weight').value = '';
-        document.getElementById('reps').value = '';
+        if(screenId === 'home') { renderHome(); }
+        if(screenId === 'workouts') { renderWorkouts(); }
+        if(screenId === 'stats') { renderStats(); }
     }
 
-    function renderLogs() {
-        const container = document.getElementById('history');
-        const logs = JSON.parse(localStorage.getItem('pro_logs')) || [];
-        
-        container.innerHTML = logs.slice(0, 10).map(log => `
-            <div class="log-item">
-                <div>
-                    <strong>${log.exercise}</strong> <span class="badge">${log.category}</span><br>
-                    <small style="color:#64748b">${log.date}</small>
-                </div>
-                <div style="text-align: right;">
-                    <span style="font-weight:bold">${log.weight}kg</span> x ${log.reps}<br>
-                    <button onclick="deleteLog(${log.id})" style="background:none; color:red; width:auto; padding:0; margin:0; font-size:10px;">Delete</button>
-                </div>
+    // --- HOME LOGIC ---
+    function renderHome() {
+        const pbDiv = document.getElementById('pb-list');
+        pbDiv.innerHTML = Object.entries(pbs).length ? '' : 'No PBs yet.';
+        for (const [ex, val] of Object.entries(pbs)) {
+            pbDiv.innerHTML += `<div><strong>${ex}</strong>: ${val}kg</div>`;
+        }
+
+        const list = document.getElementById('home-workout-list');
+        list.innerHTML = workouts.map(w => `
+            <div class="card" onclick="startWorkout(${w.id})">
+                <strong>${w.name}</strong><br>
+                <small>${w.exercises.length} Exercises</small>
             </div>
         `).join('');
     }
 
-    function renderPRs() {
-        const container = document.getElementById('prList');
-        const logs = JSON.parse(localStorage.getItem('pro_logs')) || [];
-        const prMap = {};
+    // --- WORKOUT EDITOR ---
+    function showEditor(id = null) {
+        currentEditingId = id;
+        const w = workouts.find(x => x.id === id) || { name: '', exercises: [] };
+        document.getElementById('edit-workout-name').value = w.name;
+        document.getElementById('editor-exercises').innerHTML = '';
+        w.exercises.forEach(ex => addExerciseToEditor(ex));
+        changeScreen('editor');
+    }
 
-        logs.forEach(log => {
-            if (!prMap[log.exercise] || log.weight > prMap[log.exercise]) {
-                prMap[log.exercise] = log.weight;
-            }
-        });
+    function addExerciseToEditor(data = { name: '', group: 'Chest', sets: 3 }) {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+            <input type="text" placeholder="Exercise Name" value="${data.name}" class="ex-name">
+            <select class="ex-group">
+                ${muscleGroups.map(g => `<option ${data.group === g ? 'selected' : ''}>${g}</option>`).join('')}
+            </select>
+            <input type="number" placeholder="Default Sets" value="${data.sets}" class="ex-sets">
+            <button onclick="this.parentElement.remove()" style="color:red; background:none; border:none; cursor:pointer;">Delete Exercise</button>
+        `;
+        document.getElementById('editor-exercises').appendChild(div);
+    }
 
-        const prEntries = Object.entries(prMap).slice(0, 4);
-        if (prEntries.length > 0) {
-            container.innerHTML = prEntries.map(([name, weight]) => `
-                <div class="pr-card">
-                    <div style="font-size: 0.7rem; color: #64748b;">${name}</div>
-                    <div class="pr-val">${weight}kg</div>
-                </div>
-            `).join('');
+    function saveWorkout() {
+        const name = document.getElementById('edit-workout-name').value;
+        const exNodes = document.querySelectorAll('#editor-exercises .card');
+        const exercises = Array.from(exNodes).map(node => ({
+            name: node.querySelector('.ex-name').value,
+            group: node.querySelector('.ex-group').value,
+            sets: node.querySelector('.ex-sets').value
+        }));
+
+        if(!name) return alert("Workout needs a name");
+
+        if(currentEditingId) {
+            workouts = workouts.map(w => w.id === currentEditingId ? { ...w, name, exercises } : w);
+        } else {
+            workouts.push({ id: Date.now(), name, exercises });
         }
+
+        localStorage.setItem('fx_workouts', JSON.stringify(workouts));
+        changeScreen('workouts');
     }
 
-    function deleteLog(id) {
-        let logs = JSON.parse(localStorage.getItem('pro_logs'));
-        logs = logs.filter(l => l.id !== id);
-        localStorage.setItem('pro_logs', JSON.stringify(logs));
-        renderLogs();
-        renderPRs();
+    function renderWorkouts() {
+        const div = document.getElementById('workout-list');
+        div.innerHTML = workouts.map(w => `
+            <div class="card" style="display:flex; justify-content:space-between;">
+                <div onclick="showEditor(${w.id})"><strong>${w.name}</strong></div>
+                <button onclick="deleteWorkout(${w.id})" style="background:none; border:none; color:red;">✕</button>
+            </div>
+        `).join('');
     }
 
-    // --- TIMER LOGIC ---
-    function startTimer(seconds) {
-        clearInterval(timerInterval);
-        timeLeft = seconds;
-        updateTimerDisplay();
+    function deleteWorkout(id) {
+        workouts = workouts.filter(w => w.id !== id);
+        localStorage.setItem('fx_workouts', JSON.stringify(workouts));
+        renderWorkouts();
+    }
+
+    // --- SESSION LOGIC ---
+    let activeSession = null;
+    function startWorkout(id) {
+        const w = workouts.find(x => x.id === id);
+        activeSession = JSON.parse(JSON.stringify(w));
+        document.getElementById('session-name').innerText = activeSession.name;
         
-        timerInterval = setInterval(() => {
-            timeLeft--;
-            updateTimerDisplay();
-            if (timeLeft <= 0) {
-                clearInterval(timerInterval);
-                alert("Rest over! Get to work!");
+        const content = document.getElementById('session-content');
+        content.innerHTML = activeSession.exercises.map((ex, exIdx) => `
+            <div class="card">
+                <h3>${ex.name} (${ex.group})</h3>
+                <div id="ex-${exIdx}-sets">
+                    ${Array.from({length: ex.sets}).map((_, setIdx) => renderSetRow(exIdx, setIdx)).join('')}
+                </div>
+            </div>
+        `).join('');
+        changeScreen('session');
+    }
+
+    function renderSetRow(exIdx, setIdx) {
+        return `
+            <div class="set-row">
+                <input type="number" placeholder="kg" id="w-${exIdx}-${setIdx}" onchange="checkPB('${exIdx}', this.value)">
+                <input type="number" placeholder="reps" id="r-${exIdx}-${setIdx}">
+                <button class="btn-outline" onclick="triggerRest(${setIdx})">Done</button>
+            </div>
+        `;
+    }
+
+    function triggerRest(setIdx) {
+        if(setIdx === 0) return; // Requirement: no timer after first set
+        let count = 60;
+        const overlay = document.getElementById('timer-overlay');
+        const val = document.getElementById('timer-val');
+        overlay.style.display = 'block';
+        
+        const interval = setInterval(() => {
+            count--;
+            val.innerText = count;
+            if(count <= 0) {
+                clearInterval(interval);
+                overlay.style.display = 'none';
+                alert("Rest finished!");
             }
         }, 1000);
     }
 
-    function resetTimer() {
-        clearInterval(timerInterval);
-        timeLeft = 0;
-        updateTimerDisplay();
+    function checkPB(exIdx, weight) {
+        const exName = activeSession.exercises[exIdx].name;
+        if(!pbs[exName] || parseFloat(weight) > pbs[exName]) {
+            pbs[exName] = parseFloat(weight);
+            localStorage.setItem('fx_pbs', JSON.stringify(pbs));
+        }
     }
 
-    function updateTimerDisplay() {
-        const mins = Math.floor(timeLeft / 60);
-        const secs = timeLeft % 60;
-        document.getElementById('timerDisplay').innerText = 
-            `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    function finishWorkout() {
+        logs.push({ date: new Date().toLocaleDateString(), workout: activeSession.name });
+        localStorage.setItem('fx_logs', JSON.stringify(logs));
+        alert("Workout Saved!");
+        changeScreen('home');
     }
+
+    // --- STATS LOGIC ---
+    function renderStats() {
+        const ctx = document.getElementById('statsChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: logs.map(l => l.date),
+                datasets: [{
+                    label: 'Workouts Completed',
+                    data: logs.map((_, i) => i + 1),
+                    borderColor: '#3b82f6',
+                    tension: 0.1
+                }]
+            }
+        });
+        
+        document.getElementById('history-logs').innerHTML = logs.map(l => `
+            <div class="card">${l.date} - ${l.workout}</div>
+        `).reverse().join('');
+    }
+
+    // Initial Load
+    renderHome();
 </script>
 
 </body>
 </html>
+
