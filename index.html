@@ -33,7 +33,7 @@
         .nav-item.active { color: var(--primary); font-weight: bold; }
 
         /* Typography & Inputs */
-        h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.025em; margin-bottom: 24px; }
+        h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.025em; margin-bottom: 20px; }
         label { display: block; font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
         input, select {
             background: #0f172a; border: 1px solid #334155; color: white;
@@ -50,6 +50,10 @@
         .btn-outline { background: transparent; color: var(--text); border: 1px solid #475569; }
         .btn-accent { background: var(--accent); }
         .btn-danger { background: var(--danger); }
+
+        /* Stopwatch Styling */
+        .stopwatch-display { font-family: monospace; font-size: 2.2rem; color: var(--primary); font-weight: bold; margin: 10px 0; }
+        .stopwatch-controls { display: flex; gap: 8px; }
 
         /* Workout Row Styles */
         .set-header { display: grid; grid-template-columns: 35px 1fr 1fr 50px; gap: 8px; margin-bottom: 8px; }
@@ -82,6 +86,16 @@
 <div class="container">
     <div id="screen-home" class="screen active">
         <h1>Overview</h1>
+
+        <div class="card">
+            <label>⏱️ Quick Stopwatch</label>
+            <div class="stopwatch-display" id="sw-display">00:00.0</div>
+            <div class="stopwatch-controls">
+                <button class="btn btn-sm" id="sw-start" onclick="toggleStopwatch()">Start</button>
+                <button class="btn btn-sm btn-outline" onclick="resetStopwatch()">Reset</button>
+            </div>
+        </div>
+
         <div class="card">
             <label>🏆 Personal Records</label>
             <div id="pb-list" style="margin-top:10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
@@ -145,6 +159,12 @@
     let sessionInterval = null;
     let restInterval = null;
 
+    // Stopwatch State
+    let swRunning = false;
+    let swStartTime;
+    let swInterval;
+    let swTimeElapsed = 0;
+
     const muscleGroups = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core", "Full Body"];
 
     // --- NAVIGATION ---
@@ -159,7 +179,7 @@
         if(id === 'stats') renderStats();
     }
 
-    // --- HOME ---
+    // --- HOME & STOPWATCH ---
     function renderHome() {
         const pbDiv = document.getElementById('pb-list');
         pbDiv.innerHTML = Object.entries(pbs).length ? '' : '<small>No PBs yet</small>';
@@ -170,16 +190,50 @@
         list.innerHTML = workouts.slice(0, 3).map(w => `<div class="card" onclick="startWorkout(${w.id})"><strong>${w.name}</strong><br><small style="color:var(--text-dim)">${w.exercises.length} exercises</small></div>`).join('');
     }
 
+    function toggleStopwatch() {
+        const btn = document.getElementById('sw-start');
+        if (!swRunning) {
+            swStartTime = Date.now() - swTimeElapsed;
+            swInterval = setInterval(updateStopwatch, 100);
+            btn.innerText = "Stop";
+            btn.style.background = "var(--danger)";
+            swRunning = true;
+        } else {
+            clearInterval(swInterval);
+            btn.innerText = "Start";
+            btn.style.background = "var(--primary)";
+            swRunning = false;
+        }
+    }
+
+    function updateStopwatch() {
+        swTimeElapsed = Date.now() - swStartTime;
+        const totalSecs = swTimeElapsed / 1000;
+        const mins = Math.floor(totalSecs / 60);
+        const secs = Math.floor(totalSecs % 60);
+        const ms = Math.floor((swTimeElapsed % 1000) / 100);
+        document.getElementById('sw-display').innerText = 
+            `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}.${ms}`;
+    }
+
+    function resetStopwatch() {
+        clearInterval(swInterval);
+        swRunning = false;
+        swTimeElapsed = 0;
+        document.getElementById('sw-display').innerText = "00:00.0";
+        const btn = document.getElementById('sw-start');
+        btn.innerText = "Start";
+        btn.style.background = "var(--primary)";
+    }
+
     // --- WORKOUTS PAGE ---
     function renderWorkouts() {
         const div = document.getElementById('workout-list');
         div.innerHTML = workouts.map(w => `
             <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                    <div>
-                        <strong>${w.name}</strong>
-                        <div style="font-size:0.75rem; color:var(--text-dim); margin-top:4px;">${w.exercises.map(e => e.name).join(', ')}</div>
-                    </div>
+                <div>
+                    <strong>${w.name}</strong>
+                    <div style="font-size:0.75rem; color:var(--text-dim); margin-top:4px;">${w.exercises.map(e => e.name).join(', ')}</div>
                 </div>
                 <div class="action-btns">
                     <button class="btn btn-sm" onclick="startWorkout(${w.id})">Start Session</button>
@@ -282,19 +336,29 @@
 
     function logSet(exIdx, setIdx, restTime, exName) {
         const weightInput = document.getElementById(`w-${exIdx}-${setIdx}`);
-        const repsInput = document.getElementById(`r-${exIdx}-${setIdx}`);
         const weight = parseFloat(weightInput.value);
-
         if(!pbs[exName] || weight > pbs[exName]) {
             pbs[exName] = weight;
             localStorage.setItem('ff_pro_pbs', JSON.stringify(pbs));
         }
-
-        // Lock inputs
         document.getElementById(`row-${exIdx}-${setIdx}`).querySelectorAll('input, button').forEach(el => el.classList.add('set-logged'));
-        
-        // REST TIMER START (Starts after EVERY set now)
         startRestTimer(restTime);
+    }
+
+    // --- REST TIMER & AUDIO ---
+    function playAlarm() {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.1);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 1);
     }
 
     function startRestTimer(seconds) {
@@ -308,7 +372,10 @@
         restInterval = setInterval(() => {
             count--;
             display.innerText = count.toString().padStart(2, '0');
-            if(count <= 0) closeTimer();
+            if(count <= 0) {
+                playAlarm();
+                closeTimer();
+            }
         }, 1000);
     }
 
@@ -321,11 +388,10 @@
         clearInterval(sessionInterval);
         logs.push({ date: new Date().toLocaleDateString(), workout: document.getElementById('session-name').innerText });
         localStorage.setItem('ff_pro_logs', JSON.stringify(logs));
-        alert("Workout Complete! Progress Saved.");
         changeScreen('home');
     }
 
-    // --- STATS ---
+    // --- ANALYTICS ---
     function renderStats() {
         const ctx = document.getElementById('statsChart').getContext('2d');
         new Chart(ctx, {
