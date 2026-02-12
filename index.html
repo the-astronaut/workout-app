@@ -1,183 +1,281 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workout Tracker</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexLog Pro | Elite Tracker</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+        }
 
-<style>
-body { font-family: Arial; margin:0; background:#111; color:white }
-header { padding:15px; background:#222; text-align:center }
-button { padding:12px; margin:5px; border:none; background:#4CAF50; color:white; border-radius:8px }
-.card { background:#222; margin:10px; padding:15px; border-radius:10px }
-input, select { width:100%; padding:10px; margin:5px 0 }
-.nav { position:fixed; bottom:0; width:100%; background:#222; display:flex }
-.nav button { flex:1; background:#333 }
-.hidden { display:none }
-.setRow { display:flex; gap:5px }
-.setRow input { flex:1 }
-.timer { font-size:24px; text-align:center; margin:10px }
-</style>
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--dark);
+            margin: 0;
+            padding: 15px;
+            padding-bottom: 80px; /* Space for fixed timer */
+        }
+
+        .container { max-width: 600px; margin: 0 auto; }
+
+        .header { text-align: center; padding: 20px 0; }
+        .header h1 { margin: 0; color: var(--primary); font-size: 2rem; }
+
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        h2 { margin-top: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+
+        .input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input:focus { border-color: var(--primary); outline: none; }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* Stats & Logs */
+        .log-item {
+            padding: 15px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 10px;
+            text-transform: uppercase;
+        }
+
+        /* Floating Timer Bar */
+        .timer-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--dark);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
+
+        .timer-display { font-family: monospace; font-size: 1.5rem; color: var(--secondary); }
+        .timer-btn { width: auto; padding: 8px 15px; margin: 0; font-size: 0.8rem; background: #334155; }
+
+        /* PR Dashboard */
+        .pr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .pr-card { background: #eff6ff; padding: 10px; border-radius: 8px; border-left: 4px solid var(--primary); }
+        .pr-val { font-weight: 800; font-size: 1.1rem; color: var(--primary); }
+    </style>
 </head>
-
 <body>
 
-<header id="title">Home</header>
+<div class="container">
+    <div class="header">
+        <h1>⚡ FlexLog <span style="font-weight: 300;">Pro</span></h1>
+    </div>
 
-<div id="home"></div>
-<div id="create" class="hidden"></div>
-<div id="tracker" class="hidden"></div>
-<div id="analytics" class="hidden"></div>
+    <div class="card">
+        <h2>🏆 Top Records</h2>
+        <div id="prList" class="pr-grid">
+            <p style="color: #94a3b8; font-size: 0.8rem;">Log exercises to see your PRs here.</p>
+        </div>
+    </div>
 
-<div class="nav">
-<button onclick="show('home')">Home</button>
-<button onclick="show('create')">Create</button>
-<button onclick="showAnalytics()">Analytics</button>
+    <div class="card">
+        <h2>➕ Log Set</h2>
+        <input type="text" id="exercise" placeholder="Exercise Name..." list="common-exercises">
+        <datalist id="common-exercises">
+            <option value="Bench Press">
+            <option value="Squat">
+            <option value="Deadlift">
+            <option value="Overhead Press">
+            <option value="Bicep Curls">
+        </datalist>
+        
+        <div class="input-group">
+            <input type="number" id="weight" placeholder="Weight">
+            <input type="number" id="reps" placeholder="Reps">
+        </div>
+        
+        <select id="category">
+            <option value="Strength">Strength</option>
+            <option value="Hypertrophy">Hypertrophy</option>
+            <option value="Endurance">Endurance</option>
+        </select>
+        
+        <button onclick="addLog()">LOG SET & START TIMER</button>
+    </div>
+
+    <div class="card">
+        <h2>📅 Recent History</h2>
+        <div id="history"></div>
+    </div>
+</div>
+
+<div class="timer-bar">
+    <div>REST: <span class="timer-display" id="timerDisplay">00:00</span></div>
+    <div style="display: flex; gap: 5px;">
+        <button class="timer-btn" onclick="startTimer(60)">+60s</button>
+        <button class="timer-btn" onclick="resetTimer()" style="background:var(--danger)">Reset</button>
+    </div>
 </div>
 
 <script>
+    let timerInterval;
+    let timeLeft = 0;
 
-let workouts = JSON.parse(localStorage.getItem("workouts")||"[]");
-let exercises = JSON.parse(localStorage.getItem("exercises")||"[]");
-let history = JSON.parse(localStorage.getItem("history")||"[]");
+    document.addEventListener('DOMContentLoaded', () => {
+        renderLogs();
+        renderPRs();
+    });
 
-function save(){
- localStorage.setItem("workouts",JSON.stringify(workouts));
- localStorage.setItem("exercises",JSON.stringify(exercises));
- localStorage.setItem("history",JSON.stringify(history));
-}
+    function addLog() {
+        const exercise = document.getElementById('exercise').value.trim();
+        const weight = parseFloat(document.getElementById('weight').value);
+        const reps = parseInt(document.getElementById('reps').value);
+        const category = document.getElementById('category').value;
 
-function show(page){
- document.querySelectorAll("div[id]").forEach(d=>d.classList.add("hidden"));
- document.getElementById(page).classList.remove("hidden");
- document.getElementById("title").innerText=page.toUpperCase();
+        if (!exercise || isNaN(weight) || isNaN(reps)) {
+            alert("Fill out the specs, Champ!");
+            return;
+        }
 
- if(page=="home") renderHome();
- if(page=="create") renderCreate();
-}
+        const log = {
+            id: Date.now(),
+            exercise, weight, reps, category,
+            date: new Date().toLocaleDateString()
+        };
 
-function renderHome(){
- let d=document.getElementById("home");
- d.innerHTML=`<button onclick="addExercise()">Add Exercise</button>`;
- workouts.forEach((w,i)=>{
-   d.innerHTML+=`
-   <div class="card">
-     <b>${w.name}</b><br>
-     <button onclick="startWorkout(${i})">Start</button>
-     <button onclick="deleteWorkout(${i})">Delete</button>
-   </div>`;
- });
-}
+        const logs = JSON.parse(localStorage.getItem('pro_logs')) || [];
+        logs.unshift(log);
+        localStorage.setItem('pro_logs', JSON.stringify(logs));
 
-function deleteWorkout(i){
- workouts.splice(i,1); save(); renderHome();
-}
+        renderLogs();
+        renderPRs();
+        startTimer(90); // Default 90s rest after a set
+        
+        // Reset inputs but keep exercise name for next set
+        document.getElementById('weight').value = '';
+        document.getElementById('reps').value = '';
+    }
 
-function renderCreate(){
- let d=document.getElementById("create");
- d.innerHTML=`
- <input id="wname" placeholder="Workout name">
- <button onclick="createWorkout()">Create Workout</button>
- <h3>Exercise Library</h3>
- `;
+    function renderLogs() {
+        const container = document.getElementById('history');
+        const logs = JSON.parse(localStorage.getItem('pro_logs')) || [];
+        
+        container.innerHTML = logs.slice(0, 10).map(log => `
+            <div class="log-item">
+                <div>
+                    <strong>${log.exercise}</strong> <span class="badge">${log.category}</span><br>
+                    <small style="color:#64748b">${log.date}</small>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-weight:bold">${log.weight}kg</span> x ${log.reps}<br>
+                    <button onclick="deleteLog(${log.id})" style="background:none; color:red; width:auto; padding:0; margin:0; font-size:10px;">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
 
- exercises.forEach((e,i)=>{
-   d.innerHTML+=`
-   <div class="card">
-     ${e.name} (${e.group})
-     <button onclick="deleteExercise(${i})">Delete</button>
-   </div>`;
- });
-}
+    function renderPRs() {
+        const container = document.getElementById('prList');
+        const logs = JSON.parse(localStorage.getItem('pro_logs')) || [];
+        const prMap = {};
 
-function createWorkout(){
- let name=document.getElementById("wname").value;
- if(!name) return alert("Enter name");
+        logs.forEach(log => {
+            if (!prMap[log.exercise] || log.weight > prMap[log.exercise]) {
+                prMap[log.exercise] = log.weight;
+            }
+        });
 
- workouts.push({name, exercises:[]});
- save();
- renderHome();
- show("home");
-}
+        const prEntries = Object.entries(prMap).slice(0, 4);
+        if (prEntries.length > 0) {
+            container.innerHTML = prEntries.map(([name, weight]) => `
+                <div class="pr-card">
+                    <div style="font-size: 0.7rem; color: #64748b;">${name}</div>
+                    <div class="pr-val">${weight}kg</div>
+                </div>
+            `).join('');
+        }
+    }
 
-function deleteExercise(i){
- exercises.splice(i,1); save(); renderCreate();
-}
+    function deleteLog(id) {
+        let logs = JSON.parse(localStorage.getItem('pro_logs'));
+        logs = logs.filter(l => l.id !== id);
+        localStorage.setItem('pro_logs', JSON.stringify(logs));
+        renderLogs();
+        renderPRs();
+    }
 
-function addExercise(){
- let name=prompt("Exercise name");
- if(!name) return;
- let group=prompt("Muscle group?");
- exercises.push({name,group});
- save();
- renderCreate();
-}
+    // --- TIMER LOGIC ---
+    function startTimer(seconds) {
+        clearInterval(timerInterval);
+        timeLeft = seconds;
+        updateTimerDisplay();
+        
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            updateTimerDisplay();
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                alert("Rest over! Get to work!");
+            }
+        }, 1000);
+    }
 
-function startWorkout(i){
- let w=workouts[i];
- let d=document.getElementById("tracker");
- d.innerHTML=`<h2>${w.name}</h2><div id="timer" class="timer"></div>`;
+    function resetTimer() {
+        clearInterval(timerInterval);
+        timeLeft = 0;
+        updateTimerDisplay();
+    }
 
- exercises.forEach((ex)=>{
-   d.innerHTML+=`
-   <div class="card">
-     <b>${ex.name}</b>
-     <div id="sets-${ex.name}"></div>
-     <button onclick="addSet('${ex.name}')">Add Set</button>
-   </div>`;
- });
-
- show("tracker");
-}
-
-function addSet(name){
- let container=document.getElementById("sets-"+name);
- let div=document.createElement("div");
- div.className="setRow";
- div.innerHTML=`
- <input placeholder="Reps">
- <input placeholder="Weight">
- <button onclick="restTimer()">✓</button>
- `;
- container.appendChild(div);
-}
-
-let restInterval;
-function restTimer(){
- let time=60;
- let t=document.getElementById("timer");
- t.innerText=time;
-
- clearInterval(restInterval);
- restInterval=setInterval(()=>{
-   time--;
-   t.innerText=time;
-   if(time<=0) clearInterval(restInterval);
- },1000);
-}
-
-function showAnalytics(){
- show("analytics");
- let d=document.getElementById("analytics");
-
- let totals={};
-
- exercises.forEach(e=>totals[e.group]=0);
-
- history.forEach(h=>{
-   totals[h.group]+=h.sets;
- });
-
- d.innerHTML="<h2>Sets per muscle</h2>";
-
- for(let g in totals){
-   d.innerHTML+=`<div class="card">${g}: ${totals[g]}</div>`;
- }
-}
-
-renderHome();
-
+    function updateTimerDisplay() {
+        const mins = Math.floor(timeLeft / 60);
+        const secs = timeLeft % 60;
+        document.getElementById('timerDisplay').innerText = 
+            `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
 </script>
+
 </body>
 </html>
-
-
