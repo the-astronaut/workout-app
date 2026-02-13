@@ -376,8 +376,8 @@
     <div class="nav-item" onclick="changeScreen('stats')">Stats</div>
 </nav>
 
-<script>
-    // --- STATE & DATA ---
+// --- STATE & DATA ---
+    const muscleGroups = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core", "Full Body"]; // Added missing variable
     let workouts = JSON.parse(localStorage.getItem('ff_elite_workouts')) || [];
     let logs = JSON.parse(localStorage.getItem('ff_elite_logs')) || [];
     let pbs = JSON.parse(localStorage.getItem('ff_elite_pbs')) || {};
@@ -401,7 +401,6 @@
 
     // --- HOME LOGIC ---
     function renderHome() {
-        // Date & Greeting
         const now = new Date();
         document.getElementById('date-label').innerText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         const hrs = now.getHours();
@@ -410,19 +409,12 @@
         if(hrs >= 17) greet = "Good Evening";
         document.getElementById('greeting-text').innerText = greet + ", Champ";
 
-        // PBs
         const pbScroll = document.getElementById('pb-list');
         pbScroll.innerHTML = Object.entries(pbs).length ? '' : '<p style="color:var(--text-dim)">No records logged yet.</p>';
         Object.entries(pbs).forEach(([ex, val]) => {
-            pbScroll.innerHTML += `
-                <div class="pb-chip">
-                    <span>${ex}</span>
-                    <strong>${val}kg</strong>
-                </div>
-            `;
+            pbScroll.innerHTML += `<div class="pb-chip"><span>${ex}</span><strong>${val}kg</strong></div>`;
         });
 
-        // Plans
         const planList = document.getElementById('home-workout-list');
         planList.innerHTML = workouts.slice(0,3).map(w => `
             <div class="plan-card" onclick="startWorkout(${w.id})">
@@ -470,21 +462,16 @@
     // --- WORKOUT MANAGEMENT ---
     function renderWorkouts() {
         const div = document.getElementById('workout-list');
-        div.innerHTML = `
-            <span class="plan-meta-label">${workouts.length} TOTAL PLANS</span>
-        `;
-        
+        div.innerHTML = `<span class="plan-meta-label">${workouts.length} TOTAL PLANS</span>`;
         div.innerHTML += workouts.map(w => `
             <div class="workout-card-elite">
                 <div class="workout-title-row">
                     <div class="workout-name-elite">${w.name}</div>
                     <button onclick="deleteWorkout(${w.id})" style="background:none; border:none; color:var(--text-dim); font-size:1.2rem;">&times;</button>
                 </div>
-                
                 <div class="exercise-preview-list">
                     ${w.exercises.map(e => `<span class="preview-tag">${e.name}</span>`).join('')}
                 </div>
-                
                 <div class="action-grid">
                     <button class="btn" onclick="startWorkout(${w.id})">START SESSION</button>
                     <button class="btn btn-outline" onclick="showEditor(${w.id})">EDIT</button>
@@ -498,14 +485,17 @@
         const w = workouts.find(x => x.id === id) || { name: '', exercises: [] };
         document.getElementById('edit-workout-name').value = w.name;
         document.getElementById('editor-exercises').innerHTML = '';
-        w.exercises.forEach(ex => addExerciseToEditor(ex));
-        if(!id) addExerciseToEditor();
+        if (w.exercises.length > 0) {
+            w.exercises.forEach(ex => addExerciseToEditor(ex));
+        } else {
+            addExerciseToEditor();
+        }
         changeScreen('editor');
     }
 
     function addExerciseToEditor(data = { name: '', group: 'Chest', sets: 3, reps: 10, weight: 20, rest: 60 }) {
         const div = document.createElement('div');
-        div.className = 'editor-card';
+        div.className = 'editor-card'; // Matches your CSS
         div.innerHTML = `
             <div class="exercise-header-row">
                 <div style="flex:2; margin-right:10px;">
@@ -514,31 +504,17 @@
                 </div>
                 <button class="remove-ex-btn" onclick="this.parentElement.parentElement.remove()">REMOVE</button>
             </div>
-
             <div style="margin-bottom:15px;">
                 <span class="input-label-elite">Muscle Group</span>
                 <select class="ex-group elite-input">
                     ${muscleGroups.map(g => `<option ${data.group === g ? 'selected' : ''}>${g}</option>`).join('')}
                 </select>
             </div>
-
             <div class="grid-4-cols">
-                <div>
-                    <span class="input-label-elite">Sets</span>
-                    <input type="number" value="${data.sets}" class="ex-sets elite-input">
-                </div>
-                <div>
-                    <span class="input-label-elite">Reps</span>
-                    <input type="number" value="${data.reps}" class="ex-reps elite-input">
-                </div>
-                <div>
-                    <span class="input-label-elite">KG</span>
-                    <input type="number" value="${data.weight}" class="ex-weight elite-input">
-                </div>
-                <div>
-                    <span class="input-label-elite">Rest</span>
-                    <input type="number" value="${data.rest}" class="ex-rest elite-input">
-                </div>
+                <div><span class="input-label-elite">Sets</span><input type="number" value="${data.sets}" class="ex-sets elite-input"></div>
+                <div><span class="input-label-elite">Reps</span><input type="number" value="${data.reps}" class="ex-reps elite-input"></div>
+                <div><span class="input-label-elite">KG</span><input type="number" value="${data.weight}" class="ex-weight elite-input"></div>
+                <div><span class="input-label-elite">Rest</span><input type="number" value="${data.rest}" class="ex-rest elite-input"></div>
             </div>
         `;
         document.getElementById('editor-exercises').appendChild(div);
@@ -546,17 +522,25 @@
 
     function saveWorkout() {
         const name = document.getElementById('edit-workout-name').value;
-        const exercises = Array.from(document.querySelectorAll('#editor-exercises .card')).map(n => ({
+        // Fix: Changed selector from .card to .editor-card
+        const exercises = Array.from(document.querySelectorAll('.editor-card')).map(n => ({
             name: n.querySelector('.ex-name').value,
             group: n.querySelector('.ex-group').value,
-            sets: parseInt(n.querySelector('.ex-sets').value),
-            reps: parseInt(n.querySelector('.ex-reps').value),
-            weight: parseFloat(n.querySelector('.ex-weight').value),
-            rest: parseInt(n.querySelector('.ex-rest').value)
+            sets: parseInt(n.querySelector('.ex-sets').value) || 0,
+            reps: parseInt(n.querySelector('.ex-reps').value) || 0,
+            weight: parseFloat(n.querySelector('.ex-weight').value) || 0,
+            rest: parseInt(n.querySelector('.ex-rest').value) || 0
         }));
+
         if(!name) return alert("Please name your plan");
-        if(currentEditingId) workouts = workouts.map(w => w.id === currentEditingId ? { ...w, name, exercises } : w);
-        else workouts.push({ id: Date.now(), name, exercises });
+        if(exercises.length === 0) return alert("Add at least one exercise");
+
+        if(currentEditingId) {
+            workouts = workouts.map(w => w.id === currentEditingId ? { ...w, name, exercises } : w);
+        } else {
+            workouts.push({ id: Date.now(), name, exercises });
+        }
+
         localStorage.setItem('ff_elite_workouts', JSON.stringify(workouts));
         changeScreen('workouts');
     }
@@ -572,13 +556,14 @@
     // --- SESSION LOGIC ---
     function startWorkout(id) {
         const w = workouts.find(x => x.id === id);
+        if(!w) return;
         document.getElementById('session-name').innerText = w.name;
         const content = document.getElementById('session-content');
         
         content.innerHTML = w.exercises.map((ex, exIdx) => `
-            <div class="card" style="background: rgba(30, 41, 59, 0.5)">
+            <div class="workout-card-elite" style="background: rgba(30, 41, 59, 0.5)">
                 <h3 style="margin-top:0">${ex.name}</h3>
-                <div class="set-header" style="font-size: 0.6rem; text-transform: uppercase; color: var(--text-dim);">
+                <div class="set-header" style="display:grid; grid-template-columns: 40px 1fr 1fr 60px; font-size: 0.6rem; text-transform: uppercase; color: var(--text-dim); margin-bottom:10px;">
                     <span>Set</span><span>Weight</span><span>Reps</span><span></span>
                 </div>
                 ${Array.from({length: ex.sets}).map((_, setIdx) => `
@@ -627,7 +612,6 @@
             count--;
             display.innerText = count;
             if(count <= 0) {
-                new AudioContext().resume(); // Prep for beep
                 closeTimer();
             }
         }, 1000);
@@ -646,7 +630,9 @@
     }
 
     function renderStats() {
-        const ctx = document.getElementById('statsChart').getContext('2d');
+        const canvas = document.getElementById('statsChart');
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
         new Chart(ctx, {
             type: 'line',
             data: {
@@ -655,12 +641,12 @@
             },
             options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
         });
-        document.getElementById('history-logs').innerHTML = logs.map(l => `<div class="card">${l.date} - ${l.workout}</div>`).reverse().join('');
+        document.getElementById('history-logs').innerHTML = logs.map(l => `<div class="workout-card-elite" style="padding:15px; margin-bottom:10px;">${l.date} - ${l.workout}</div>`).reverse().join('');
     }
 
     // Init
     renderHome();
-</script>
 </body>
 </html>
+
 
