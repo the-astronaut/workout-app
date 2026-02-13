@@ -160,7 +160,39 @@
     #screen-workouts h1 {
         margin-bottom: 8px;
     }
+.editor-header-card {
+    background: var(--primary-grad);
+    padding: 30px 20px;
+    border-radius: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
+}
 
+.editor-header-card label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 8px;
+}
+
+.plan-name-input {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid rgba(255,255,255,0.3);
+    color: white;
+    font-size: 1.8rem;
+    font-weight: 800;
+    width: 100%;
+    outline: none;
+    padding: 5px 0;
+}
+
+.plan-name-input::placeholder {
+    color: rgba(255,255,255,0.4);
+}
     .plan-meta-label {
         color: var(--primary-light);
         font-size: 0.7rem;
@@ -262,11 +294,22 @@
         background: rgba(99, 102, 241, 0.05) !important;
     }
 
-    .grid-4-cols {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 10px;
-    }
+   .grid-4-cols {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px; /* Slightly tighter gap to allow for input padding */
+}
+
+.grid-4-cols div {
+    min-width: 0; /* Prevents flex/grid items from forcing width */
+}
+
+.elite-input {
+    width: 100%;
+    box-sizing: border-box; /* Essential to prevent padding from adding to width */
+    text-align: center;
+    padding: 10px 4px !important; /* Reduced side padding */
+}
 
     .remove-ex-btn {
         color: var(--danger);
@@ -649,6 +692,7 @@
 </script>
 </body>
 </html>
+
 
 
 
