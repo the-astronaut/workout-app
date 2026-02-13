@@ -364,7 +364,7 @@
             weight: parseFloat(exWeight?.value) || 0,
             rest: parseInt(exRest?.value) || 60
         };
-    }).filter(ex => ex.name !== "" || (exName && exName.value)); // Filter out completely empty exercises
+    }).filter(ex => ex.name !== "Exercise" || (exName && exName.value)); // Filter out completely empty exercises
 
     if(exerciseData.length === 0) return alert("Add at least one exercise with a name!");
 
@@ -380,7 +380,6 @@
     changeScreen('workouts');
     currentEditingId = null;
 }
-
     function deleteWorkout(id) {
         if(confirm("Delete this plan?")) {
             workouts = workouts.filter(w => w.id !== id);
