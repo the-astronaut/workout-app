@@ -76,15 +76,41 @@
         .grid-4-cols div { min-width: 0; }
         
         .elite-input {
-            width: 100%;
-            box-sizing: border-box; /* Fixes overflow */
-            background: rgba(255,255,255,0.03) !important;
-            border: 1px solid #334155 !important;
-            border-radius: 12px !important;
-            padding: 10px 4px !important;
-            color: white !important;
-            text-align: center;
-        }
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+    color: white !important;
+    font-size: 0.95rem !important;
+    appearance: none; /* Removes default browser arrow */
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+/* Custom Arrow for the Select Dropdown */
+select.elite-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px !important;
+    cursor: pointer;
+}
+
+/* Fix for the dropdown list items readability */
+select.elite-input option {
+    background-color: #1e293b; /* Solid dark background */
+    color: white;
+    padding: 10px;
+}
+
+.elite-input:focus {
+    border-color: var(--primary) !important;
+    background: rgba(99, 102, 241, 0.1) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
 
         /* Rest of UI */
         .stopwatch-card {
@@ -315,24 +341,51 @@
     }
 
     function saveWorkout() {
-        const name = document.getElementById('edit-workout-name').value;
-        const exercises = Array.from(document.querySelectorAll('.editor-card')).map(n => ({
-            name: n.querySelector('.ex-name').value,
-            group: n.querySelector('.ex-group').value,
-            sets: parseInt(n.querySelector('.ex-sets').value) || 0,
-            reps: parseInt(n.querySelector('.ex-reps').value) || 0,
-            weight: parseFloat(n.querySelector('.ex-weight').value) || 0,
-            rest: parseInt(n.querySelector('.ex-rest').value) || 0
-        }));
+    // 1. Get the plan name using the correct ID
+    const nameInput = document.getElementById('edit-workout-name');
+    const name = nameInput ? nameInput.value.trim() : "";
 
-        if(!name || exercises.length === 0) return alert("Complete the plan details");
+    // 2. Select all exercise cards (using the .editor-card class)
+    const exerciseCards = document.querySelectorAll('.editor-card');
+    
+    const exercises = Array.from(exerciseCards).map(card => {
+        return {
+            name: card.querySelector('.ex-name').value || "Unnamed Exercise",
+            group: card.querySelector('.ex-group').value,
+            sets: parseInt(card.querySelector('.ex-sets').value) || 0,
+            reps: parseInt(card.querySelector('.ex-reps').value) || 0,
+            weight: parseFloat(card.querySelector('.ex-weight').value) || 0,
+            rest: parseInt(card.querySelector('.ex-rest').value) || 0
+        };
+    });
 
-        if(currentEditingId) workouts = workouts.map(w => w.id === currentEditingId ? { ...w, name, exercises } : w);
-        else workouts.push({ id: Date.now(), name, exercises });
-
-        localStorage.setItem('ff_elite_workouts', JSON.stringify(workouts));
-        changeScreen('workouts');
+    // 3. Validation
+    if(!name) {
+        alert("Please enter a Plan Name (e.g., Push Day)");
+        return;
     }
+    if(exercises.length === 0) {
+        alert("Please add at least one exercise to your plan");
+        return;
+    }
+
+    // 4. Save Logic
+    if(currentEditingId) {
+        workouts = workouts.map(w => w.id === currentEditingId ? { ...w, name, exercises } : w);
+    } else {
+        workouts.push({ 
+            id: Date.now(), 
+            name: name, 
+            exercises: exercises 
+        });
+    }
+
+    localStorage.setItem('ff_elite_workouts', JSON.stringify(workouts));
+    
+    // 5. UI Feedback & Redirect
+    changeScreen('workouts');
+    renderWorkouts(); // Refresh the list
+}
 
     function deleteWorkout(id) {
         if(confirm("Delete this plan?")) {
@@ -422,3 +475,4 @@
 </script>
 </body>
 </html>
+
