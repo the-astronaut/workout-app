@@ -375,7 +375,7 @@
     <div class="nav-item" onclick="changeScreen('workouts')">Plans</div>
     <div class="nav-item" onclick="changeScreen('stats')">Stats</div>
 </nav>
-
+<script>
 // --- STATE & DATA ---
     const muscleGroups = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core", "Full Body"]; // Added missing variable
     let workouts = JSON.parse(localStorage.getItem('ff_elite_workouts')) || [];
@@ -646,7 +646,9 @@
 
     // Init
     renderHome();
+</script>
 </body>
 </html>
+
 
 
