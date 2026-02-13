@@ -357,14 +357,14 @@
         const exRest = card.querySelector('.ex-rest');
         
         return {
-            name: (exName?.value || "Exercise").trim(),
+            name: (exName?.value || "").trim(),
             group: exGroup?.value || "Chest",
             sets: parseInt(exSets?.value) || 3,
             reps: parseInt(exReps?.value) || 10,
             weight: parseFloat(exWeight?.value) || 0,
             rest: parseInt(exRest?.value) || 60
         };
-    }).filter(ex => ex.name.trim() !== ""); // FIXED: Changed from broken filter
+    }).filter(ex => ex.name !== ""); // FIXED: Simple, correct filter
 
     if(exerciseData.length === 0) return alert("Add at least one exercise with a name!");
 
