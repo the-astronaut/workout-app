@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FlexFlow Elite x Forge</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --black: #0A0A0A;
+            --surface: #141414;
+            --card: #1C1C1C;
+            --border: #2A2A2A;
+            --lime: #C6F135;
+            --white: #F0F0F0;
+            --gray: #888;
+            --primary-grad: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--black);
+            color: var(--white);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- FORGE LAYOUT UTILITIES --- */
+        .screen { display: none; height: 100vh; flex-direction: column; overflow: hidden; }
+        .screen.active { display: flex; }
+        .content-scroll { flex: 1; overflow-y: auto; padding: 0 24px 100px; }
+
+        h1, h2, .bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; text-transform: uppercase; }
+
+        /* --- HOME DASHBOARD COMPONENTS --- */
+        .home-header { padding: 40px 24px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .greeting .hey { font-size: 12px; color: var(--gray); }
+        .greeting .name { font-size: 32px; margin: 0; }
+
+        .streak-banner {
+            margin: 0 24px 24px; background: var(--lime); border-radius: 18px; padding: 16px;
+            display: flex; align-items: center; gap: 15px; color: var(--black);
+        }
+        .streak-num { font-family: 'Bebas Neue', sans-serif; font-size: 48px; line-height: 1; }
+
+        .section-header { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; }
+        .section-title { font-size: 20px; color: var(--white); }
+
+        /* --- CARDS --- */
+        .forge-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+            padding: 18px; margin-bottom: 12px; position: relative;
+        }
+        .plan-card-accent::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+            background: var(--lime); border-radius: 0 2px 2px 0;
+        }
+
+        /* --- ACTIVE WORKOUT SCREEN --- */
+        .workout-hero { background: linear-gradient(160deg, #1C2A0A 0%, #0A0A0A 60%); padding: 40px 24px 24px; }
+        .workout-category { font-size: 11px; color: var(--lime); font-weight: 700; letter-spacing: 2px; }
+        .workout-big-title { font-size: 42px; line-height: 1; margin: 5px 0; }
+
+        .timer-section { padding: 20px 24px; display: flex; align-items: center; gap: 20px; border-bottom: 1px solid var(--border); }
+        .timer-ring {
+            width: 80px; height: 80px; border-radius: 50%; border: 4px solid var(--border);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .timer-time { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700; }
+
+        /* --- NAVIGATION --- */
+        .bottom-nav {
+            position: fixed; bottom: 0; width: 100%; background: var(--surface);
+            border-top: 1px solid var(--border); display: flex; justify-content: space-around;
+            padding: 12px 0 24px; z-index: 1000;
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--gray); cursor: pointer; }
+        .nav-item.active { color: var(--lime); }
+        .nav-item span { font-size: 9px; text-transform: uppercase; font-weight: 700; }
+
+        /* --- INPUTS & BUTTONS --- */
+        .elite-input {
+            background: var(--surface) !important; border: 1px solid var(--border) !important;
+            border-radius: 8px !important; color: white !important; padding: 10px !important;
+            font-family: 'Space Mono', monospace; text-align: center; width: 100%;
+        }
+        .btn {
+            background: var(--lime); color: var(--black); border: none; padding: 18px;
+            border-radius: 16px; font-family: 'Bebas Neue', sans-serif; font-size: 20px;
+            width: 100%; cursor: pointer; letter-spacing: 1px;
+        }
+        .set-row { display: grid; grid-template-columns: 30px 1fr 1fr 50px; gap: 8px; align-items: center; margin-bottom: 10px; }
+        
+        /* Modal for Rest */
+        #timer-modal { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9); 
+            z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; 
+        }
+
+        /* Hide Number Spinners */
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body>
+
+<div id="timer-modal">
+    <div class="bebas" style="font-size: 10px; color: var(--lime); letter-spacing: 3px;">RESTING</div>
+    <div style="font-size: 8rem; font-family: 'Space Mono', monospace;" id="timer-display">60</div>
+    <button class="btn" style="width: auto; padding: 10px 40px;" onclick="closeTimer()">SKIP</button>
+</div>
+
+<div id="screen-home" class="screen active">
+    <div class="home-header">
+        <div class="greeting">
+            <div class="hey">Good morning 👋</div>
+            <h1 class="name">CHAMP</h1>
+        </div>
+        <div style="width:44px; height:44px; background:var(--lime); border-radius:50%; color:black; display:flex; align-items:center; justify-content:center; font-weight:800;">C</div>
+    </div>
+    
+    <div class="content-scroll">
+        <div class="streak-banner">
+            <div class="streak-num" id="streak-count">0</div>
+            <div>
+                <div style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Day Streak</div>
+                <div style="font-size: 14px; font-weight: 700;">Consistency is key!</div>
+            </div>
+        </div>
+
+        <div class="section-header"><div class="section-title">TODAY'S PLAN</div></div>
+        <div id="today-plan-container"></div>
+
+        <div class="section-header" style="margin-top:20px;"><div class="section-title">EXPLORE PLANS</div></div>
+        <div id="home-workout-list"></div>
+    </div>
+</div>
+
+<div id="screen-workouts" class="screen">
+    <div class="home-header">
+        <h1 class="name">MY PLANS</h1>
+        <button class="btn" style="width:auto; padding: 5px 15px; font-size:14px;" onclick="showEditor()">+ CREATE</button>
+    </div>
+    <div class="content-scroll" id="workout-list"></div>
+</div>
+
+<div id="screen-editor" class="screen">
+    <div class="home-header">
+        <h1 class="name">EDIT PLAN</h1>
+    </div>
+    <div class="content-scroll">
+        <input type="text" id="edit-workout-name" class="bebas" style="background:transparent; border:none; border-left:4px solid var(--lime); padding-left:15px; font-size:32px; color:white; width:100%; outline:none;" placeholder="PLAN NAME">
+        <div id="editor-exercises" style="margin-top:20px;"></div>
+        <button class="btn" style="background:transparent; border:1px dashed var(--border); color:var(--gray); margin-bottom:12px;" onclick="addExerciseToEditor()">+ ADD EXERCISE</button>
+        <button class="btn" onclick="saveWorkout()">SAVE PLAN</button>
+        <p onclick="changeScreen('workouts')" style="text-align:center; color:var(--gray); margin-top:20px; font-size:12px; cursor:pointer;">DISCARD CHANGES</p>
+    </div>
+</div>
+
+<div id="screen-session" class="screen">
+    <div class="workout-hero">
+        <div class="workout-category" id="session-category">WORKOUT</div>
+        <h1 class="workout-big-title" id="session-name">PLAN NAME</h1>
+    </div>
+    <div class="timer-section">
+        <div class="timer-ring">
+            <div class="timer-time" id="session-timer">00:00</div>
+            <div style="font-size:8px; color:var(--gray);">ELAPSED</div>
+        </div>
+        <div>
+            <div style="font-size:10px; color:var(--gray); letter-spacing:1px;">STATUS</div>
+            <div class="bebas" style="font-size:20px; color:var(--lime);">SESSION ACTIVE</div>
+        </div>
+    </div>
+    <div class="content-scroll" id="session-content" style="padding-top:20px;"></div>
+    <div style="padding: 20px 24px 100px;">
+        <button class="btn" onclick="finishWorkout()">FINISH WORKOUT</button>
+    </div>
+</div>
+
+<div id="screen-stats" class="screen">
+    <div class="workout-hero" style="text-align:center; display:flex; flex-direction:column; align-items:center;">
+        <div style="width:80px; height:80px; background:var(--card); border:2px solid var(--lime); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:30px; margin-bottom:10px;">C</div>
+        <h1 class="name">CHAMPION USER</h1>
+        <div style="background:rgba(198,241,53,0.1); color:var(--lime); padding:4px 12px; border-radius:20px; font-size:10px; font-weight:700;">WARRIOR LEVEL</div>
+    </div>
+    <div class="content-scroll">
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:1px; background:var(--border); border-radius:15px; overflow:hidden; border:1px solid var(--border); margin-top:20px;">
+            <div style="background:var(--card); padding:15px; text-align:center;">
+                <div class="bebas" style="font-size:24px;" id="stat-workouts">0</div>
+                <div style="font-size:9px; color:var(--gray);">WORKOUTS</div>
+            </div>
+            <div style="background:var(--card); padding:15px; text-align:center;">
+                <div class="bebas" style="font-size:24px;" id="stat-streak">0</div>
+                <div style="font-size:9px; color:var(--gray);">STREAK</div>
+            </div>
+            <div style="background:var(--card); padding:15px; text-align:center;">
+                <div class="bebas" style="font-size:24px;">85</div>
+                <div style="font-size:9px; color:var(--gray);">WEIGHT</div>
+            </div>
+        </div>
+        <div class="forge-card" style="margin-top:20px;">
+            <div class="bebas" style="margin-bottom:15px;">WEEKLY VOLUME</div>
+            <canvas id="statsChart"></canvas>
+        </div>
+        <div id="history-logs"></div>
+    </div>
+</div>
+
+<nav class="bottom-nav">
+    <div class="nav-item active" onclick="changeScreen('home')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        <span>Home</span>
+    </div>
+    <div class="nav-item" onclick="changeScreen('workouts')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14 4.14 5.57 2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29l-1.43-1.43z"/></svg>
+        <span>Plans</span>
+    </div>
+    <div class="nav-item" onclick="changeScreen('stats')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        <span>Stats</span>
+    </div>
+</nav>
+
+<script>
+    let workouts = JSON.parse(localStorage.getItem('ff_elite_workouts')) || [];
+    let logs = JSON.parse(localStorage.getItem('ff_elite_logs')) || [];
+    let currentEditingId = null;
+    let workoutStartTime, sessionInterval, restInterval;
+
+    function changeScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(`screen-${id}`).classList.add('active');
+        
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        // Mapping for active state
+        if(id === 'home') document.querySelectorAll('.nav-item')[0].classList.add('active');
+        if(id === 'workouts') document.querySelectorAll('.nav-item')[1].classList.add('active');
+        if(id === 'stats') document.querySelectorAll('.nav-item')[2].classList.add('active');
+
+        if(id === 'home') renderHome();
+        if(id === 'workouts') renderWorkouts();
+        if(id === 'stats') renderStats();
+        window.scrollTo(0,0);
+    }
+
+    function renderHome() {
+        const todayCont = document.getElementById('today-plan-container');
+        const exploreCont = document.getElementById('home-workout-list');
+        document.getElementById('streak-count').innerText = logs.length;
+
+        if (workouts.length > 0) {
+            const w = workouts[0];
+            todayCont.innerHTML = `
+                <div class="forge-card plan-card-accent" onclick="startWorkout(${w.id})">
+                    <div style="font-size:10px; color:var(--lime); font-weight:700; letter-spacing:1px;">RECOMMENDED</div>
+                    <div class="bebas" style="font-size:24px; margin:5px 0;">${w.name}</div>
+                    <div style="font-size:12px; color:var(--gray);">${w.exercises.length} Exercises • Strength</div>
+                </div>`;
+            
+            exploreCont.innerHTML = workouts.slice(1).map(w => `
+                <div class="forge-card" onclick="startWorkout(${w.id})">
+                    <div class="bebas" style="font-size:20px;">${w.name}</div>
+                    <div style="font-size:11px; color:var(--gray);">${w.exercises.length} Exercises</div>
+                </div>
+            `).join('');
+        } else {
+            todayCont.innerHTML = `<p style="color:var(--gray); font-size:12px;">No plans created yet.</p>`;
+        }
+    }
+
+    function renderWorkouts() {
+        document.getElementById('workout-list').innerHTML = workouts.map(w => `
+            <div class="forge-card">
+                <div style="display:flex; justify-content:space-between;">
+                    <div class="bebas" style="font-size:22px;">${w.name}</div>
+                    <div onclick="deleteWorkout(${w.id})" style="color:var(--gray); font-size:18px;">&times;</div>
+                </div>
+                <div style="margin: 10px 0; display:flex; gap:5px; flex-wrap:wrap;">
+                    ${w.exercises.map(ex => `<span style="font-size:9px; background:var(--surface); padding:3px 8px; border-radius:5px; color:var(--gray); border:1px solid var(--border);">${ex.name}</span>`).join('')}
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <button class="btn" style="padding:10px; font-size:14px;" onclick="startWorkout(${w.id})">START</button>
+                    <button class="btn" style="padding:10px; font-size:14px; background:transparent; border:1px solid var(--border); color:white;" onclick="showEditor(${w.id})">EDIT</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function showEditor(id = null) {
+        currentEditingId = id;
+        const w = workouts.find(x => x.id === id) || { name: '', exercises: [] };
+        document.getElementById('edit-workout-name').value = w.name;
+        document.getElementById('editor-exercises').innerHTML = '';
+        if (w.exercises.length > 0) w.exercises.forEach(ex => addExerciseToEditor(ex));
+        else addExerciseToEditor();
+        changeScreen('editor');
+    }
+
+    function addExerciseToEditor(data = { name: '', sets: 3, reps: 10, weight: 20, rest: 60 }) {
+        const div = document.createElement('div');
+        div.className = 'forge-card';
+        div.innerHTML = `
+            <input type="text" value="${data.name}" class="ex-name elite-input" style="text-align:left; margin-bottom:10px;" placeholder="EXERCISE NAME">
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
+                <div><div style="font-size:8px; color:var(--gray); text-align:center;">SETS</div><input type="number" value="${data.sets}" class="ex-sets elite-input"></div>
+                <div><div style="font-size:8px; color:var(--gray); text-align:center;">REPS</div><input type="number" value="${data.reps}" class="ex-reps elite-input"></div>
+                <div><div style="font-size:8px; color:var(--gray); text-align:center;">KG</div><input type="number" value="${data.weight}" class="ex-weight elite-input"></div>
+                <div><div style="font-size:8px; color:var(--gray); text-align:center;">REST</div><input type="number" value="${data.rest}" class="ex-rest elite-input"></div>
+            </div>
+            <p onclick="this.parentElement.remove()" style="color:red; font-size:10px; text-align:right; margin-top:10px; cursor:pointer;">REMOVE</p>
+        `;
+        document.getElementById('editor-exercises').appendChild(div);
+    }
+
+    function saveWorkout() {
+        const name = document.getElementById('edit-workout-name').value;
+        const exerciseCards = document.querySelectorAll('#editor-exercises .forge-card');
+        const exData = Array.from(exerciseCards).map(card => ({
+            name: card.querySelector('.ex-name').value,
+            sets: card.querySelector('.ex-sets').value,
+            reps: card.querySelector('.ex-reps').value,
+            weight: card.querySelector('.ex-weight').value,
+            rest: card.querySelector('.ex-rest').value
+        }));
+
+        if(currentEditingId) workouts = workouts.map(w => w.id === currentEditingId ? { ...w, name, exercises: exData } : w);
+        else workouts.push({ id: Date.now(), name, exercises: exData });
+
+        localStorage.setItem('ff_elite_workouts', JSON.stringify(workouts));
+        changeScreen('workouts');
+    }
+
+    function startWorkout(id) {
+        const w = workouts.find(x => x.id === id);
+        document.getElementById('session-name').innerText = w.name;
+        document.getElementById('session-content').innerHTML = w.exercises.map((ex, exIdx) => `
+            <div class="forge-card">
+                <div class="bebas" style="color:var(--lime); margin-bottom:10px;">${ex.name}</div>
+                ${Array.from({length: ex.sets}).map((_, setIdx) => `
+                    <div class="set-row" id="row-${exIdx}-${setIdx}">
+                        <div style="font-size:12px; font-weight:700; color:var(--gray);">${setIdx+1}</div>
+                        <input type="number" value="${ex.weight}" class="elite-input" id="w-${exIdx}-${setIdx}">
+                        <input type="number" value="${ex.reps}" class="elite-input" id="r-${exIdx}-${setIdx}">
+                        <button class="btn" style="padding:5px; font-size:12px;" onclick="logSet(${exIdx}, ${setIdx}, ${ex.rest})">✓</button>
+                    </div>
+                `).join('')}
+            </div>
+        `).join('');
+
+        workoutStartTime = Date.now();
+        clearInterval(sessionInterval);
+        sessionInterval = setInterval(() => {
+            let diff = Date.now() - workoutStartTime;
+            let m = Math.floor(diff/60000).toString().padStart(2,'0');
+            let s = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
+            document.getElementById('session-timer').innerText = `${m}:${s}`;
+        }, 1000);
+        changeScreen('session');
+    }
+
+    function logSet(exIdx, setIdx, rest) {
+        const row = document.getElementById(`row-${exIdx}-${setIdx}`);
+        row.style.opacity = "0.3";
+        row.querySelector('button').style.background = "var(--border)";
+        
+        document.getElementById('timer-modal').style.display = 'flex';
+        let count = rest;
+        document.getElementById('timer-display').innerText = count;
+        clearInterval(restInterval);
+        restInterval = setInterval(() => {
+            count--;
+            document.getElementById('timer-display').innerText = count;
+            if(count <= 0) closeTimer();
+        }, 1000);
+    }
+
+    function closeTimer() {
+        clearInterval(restInterval);
+        document.getElementById('timer-modal').style.display = 'none';
+    }
+
+    function finishWorkout() {
+        clearInterval(sessionInterval);
+        logs.push({ date: new Date().toLocaleDateString(), workout: document.getElementById('session-name').innerText });
+        localStorage.setItem('ff_elite_logs', JSON.stringify(logs));
+        changeScreen('home');
+    }
+
+    function renderStats() {
+        document.getElementById('stat-workouts').innerText = logs.length;
+        document.getElementById('stat-streak').innerText = logs.length;
+        
+        const ctx = document.getElementById('statsChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+                datasets: [{ data: [2, 3, 1, 4, 2, 0, 1], backgroundColor: '#C6F135', borderRadius: 5 }]
+            },
+            options: { plugins: { legend: false }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+        });
+
+        document.getElementById('history-logs').innerHTML = [...logs].reverse().map(l => `
+            <div class="forge-card" style="display:flex; justify-content:space-between; align-items:center;">
+                <div><div style="font-size:12px; font-weight:700;">${l.workout}</div><div style="font-size:10px; color:var(--gray);">${l.date}</div></div>
+                <div style="color:var(--lime); font-size:10px; font-weight:700;">COMPLETED</div>
+            </div>
+        `).join('');
+    }
+
+    renderHome();
+</script>
+</body>
+</html>
