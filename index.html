@@ -336,34 +336,42 @@
     }
 
     function saveWorkout() {
-        const name = document.getElementById('edit-workout-name').value.trim();
-        const cards = document.querySelectorAll('.editor-card');
+    const name = document.getElementById('edit-workout-name').value.trim();
+    const cards = document.querySelectorAll('.editor-card');
+    
+    if(!name) return alert("Enter a plan name!");
+    if(cards.length === 0) return alert("Add at least one exercise!");
+
+    const exerciseData = Array.from(cards).map(card => {
+        const exName = card.querySelector('.ex-name');
+        const exGroup = card.querySelector('.ex-group');
+        const exSets = card.querySelector('.ex-sets');
+        const exReps = card.querySelector('.ex-reps');
+        const exWeight = card.querySelector('.ex-weight');
+        const exRest = card.querySelector('.ex-rest');
         
-        if(!name) return alert("Enter a plan name!");
-        if(cards.length === 0) return alert("Add at least one exercise!");
+        return {
+            name: (exName?.value || "Exercise").trim(),
+            group: exGroup?.value || "Chest",
+            sets: parseInt(exSets?.value) || 3,
+            reps: parseInt(exReps?.value) || 10,
+            weight: parseFloat(exWeight?.value) || 0,
+            rest: parseInt(exRest?.value) || 60
+        };
+    });
 
-        const exerciseData = Array.from(cards).map(card => ({
-            name: card.querySelector('.ex-name').value || "Exercise",
-            group: card.querySelector('.ex-group').value,
-            sets: parseInt(card.querySelector('.ex-sets').value) || 0,
-            reps: parseInt(card.querySelector('.ex-reps').value) || 0,
-            weight: parseFloat(card.querySelector('.ex-weight').value) || 0,
-            rest: parseInt(card.querySelector('.ex-rest').value) || 0
-        }));
-
-        if(currentEditingId) {
-            workouts = workouts.map(w => w.id === currentEditingId ? { ...w, name, exercises: exerciseData } : w);
-        } else {
-            workouts.push({ id: Date.now(), name, exercises: exerciseData });
-        }
-
-        localStorage.setItem('ff_elite_workouts', JSON.stringify(workouts));
-        
-        // Final UI updates
-        renderWorkouts();
-        changeScreen('workouts');
-        currentEditingId = null;
+    if(currentEditingId) {
+        workouts = workouts.map(w => w.id === currentEditingId ? { ...w, name, exercises: exerciseData } : w);
+    } else {
+        workouts.push({ id: Date.now(), name, exercises: exerciseData });
     }
+
+    localStorage.setItem('ff_elite_workouts', JSON.stringify(workouts));
+    
+    renderWorkouts();
+    changeScreen('workouts');
+    currentEditingId = null;
+}
 
     function deleteWorkout(id) {
         if(confirm("Delete this plan?")) {
@@ -463,4 +471,5 @@
 </script>
 </body>
 </html>
+
 
