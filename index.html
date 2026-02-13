@@ -302,17 +302,19 @@
     }
 
     function showEditor(id = null) {
-        currentEditingId = id;
-        const w = workouts.find(x => x.id === id) || { name: '', exercises: [] };
-        document.getElementById('edit-workout-name').value = w.name;
-        document.getElementById('editor-exercises').innerHTML = '';
-        if (w.exercises.length > 0) {
-            w.exercises.forEach(ex => addExerciseToEditor(ex));
-        } else {
-            addExerciseToEditor();
-        }
-        changeScreen('editor');
+    currentEditingId = id;
+    const w = workouts.find(x => x.id === id) || { name: '', exercises: [] };
+    document.getElementById('edit-workout-name').value = w.name;
+    document.getElementById('editor-exercises').innerHTML = '';
+    if (w.exercises.length > 0) {
+        w.exercises.forEach(ex => addExerciseToEditor(ex));
+    } else if (id === null) {
+        // Only add a blank exercise for NEW workouts
+        addExerciseToEditor();
     }
+    // For existing workouts with no exercises, don't add a default one
+    changeScreen('editor');
+}
 
     function addExerciseToEditor(data = { name: '', group: 'Chest', sets: 3, reps: 10, weight: 20, rest: 60 }) {
         const div = document.createElement('div');
@@ -358,7 +360,9 @@
             weight: parseFloat(exWeight?.value) || 0,
             rest: parseInt(exRest?.value) || 60
         };
-    });
+    }).filter(ex => ex.name !== "Exercise" || (exName && exName.value)); // Filter out completely empty exercises
+
+    if(exerciseData.length === 0) return alert("Add at least one exercise with a name!");
 
     if(currentEditingId) {
         workouts = workouts.map(w => w.id === currentEditingId ? { ...w, name, exercises: exerciseData } : w);
@@ -471,5 +475,6 @@
 </script>
 </body>
 </html>
+
 
 
