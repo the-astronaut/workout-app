@@ -156,7 +156,140 @@
             background: #334155; color: white; cursor: pointer; 
         }
         .set-logged { background: var(--accent) !important; color: white !important; }
+/* --- Plans Screen Refinements --- */
+    #screen-workouts h1 {
+        margin-bottom: 8px;
+    }
 
+    .plan-meta-label {
+        color: var(--primary-light);
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 1px;
+        margin-bottom: 20px;
+        display: block;
+    }
+
+    .workout-card-elite {
+        background: var(--glass);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.05);
+        border-radius: 24px;
+        padding: 24px;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .workout-card-elite::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 4px; height: 100%;
+        background: var(--primary-grad);
+    }
+
+    .workout-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+
+    .workout-name-elite {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: var(--text);
+    }
+
+    .exercise-preview-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 20px;
+    }
+
+    .preview-tag {
+        font-size: 0.65rem;
+        background: rgba(255,255,255,0.05);
+        color: var(--text-dim);
+        padding: 4px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .action-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 10px;
+    }
+
+    /* --- Editor Screen Refinements --- */
+    .editor-card {
+        background: #0f172a;
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 16px;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+    }
+
+    .exercise-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .input-label-elite {
+        font-size: 0.65rem;
+        color: var(--text-dim);
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .elite-input {
+        background: rgba(255,255,255,0.03) !important;
+        border: 1px solid #334155 !important;
+        border-radius: 12px !important;
+        padding: 10px 14px !important;
+        color: white !important;
+        font-size: 0.9rem !important;
+    }
+
+    .elite-input:focus {
+        border-color: var(--primary) !important;
+        background: rgba(99, 102, 241, 0.05) !important;
+    }
+
+    .grid-4-cols {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+    }
+
+    .remove-ex-btn {
+        color: var(--danger);
+        background: rgba(239, 68, 68, 0.1);
+        border: none;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .fab-add {
+        background: var(--primary-grad);
+        width: 100%;
+        padding: 16px;
+        border-radius: 16px;
+        color: white;
+        font-weight: 800;
+        border: none;
+        margin-bottom: 40px;
+        box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
+    }
     </style>
 </head>
 <body>
@@ -337,16 +470,24 @@
     // --- WORKOUT MANAGEMENT ---
     function renderWorkouts() {
         const div = document.getElementById('workout-list');
-        div.innerHTML = workouts.map(w => `
-            <div class="card">
-                <div style="font-weight: 800; font-size: 1.2rem; margin-bottom: 8px;">${w.name}</div>
-                <div style="color: var(--text-dim); font-size: 0.8rem; margin-bottom: 16px;">
-                    ${w.exercises.map(e => e.name).join(' • ')}
+        div.innerHTML = `
+            <span class="plan-meta-label">${workouts.length} TOTAL PLANS</span>
+        `;
+        
+        div.innerHTML += workouts.map(w => `
+            <div class="workout-card-elite">
+                <div class="workout-title-row">
+                    <div class="workout-name-elite">${w.name}</div>
+                    <button onclick="deleteWorkout(${w.id})" style="background:none; border:none; color:var(--text-dim); font-size:1.2rem;">&times;</button>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-sm" onclick="startWorkout(${w.id})">Start Session</button>
-                    <button class="btn btn-sm btn-outline" onclick="showEditor(${w.id})">Edit</button>
-                    <button class="btn btn-sm btn-outline" style="color: var(--danger); border-color: transparent;" onclick="deleteWorkout(${w.id})">Delete</button>
+                
+                <div class="exercise-preview-list">
+                    ${w.exercises.map(e => `<span class="preview-tag">${e.name}</span>`).join('')}
+                </div>
+                
+                <div class="action-grid">
+                    <button class="btn" onclick="startWorkout(${w.id})">START SESSION</button>
+                    <button class="btn btn-outline" onclick="showEditor(${w.id})">EDIT</button>
                 </div>
             </div>
         `).join('');
@@ -364,19 +505,41 @@
 
     function addExerciseToEditor(data = { name: '', group: 'Chest', sets: 3, reps: 10, weight: 20, rest: 60 }) {
         const div = document.createElement('div');
-        div.className = 'card';
+        div.className = 'editor-card';
         div.innerHTML = `
-            <div style="display:flex; gap:10px; margin-bottom:12px;">
-                <div style="flex:2"><label>Exercise</label><input type="text" value="${data.name}" class="ex-name" placeholder="e.g. Squat"></div>
-                <div style="flex:1"><label>Muscle</label><select class="ex-group"><option>Chest</option><option>Back</option><option>Legs</option><option>Shoulders</option><option>Arms</option></select></div>
+            <div class="exercise-header-row">
+                <div style="flex:2; margin-right:10px;">
+                    <span class="input-label-elite">Exercise Name</span>
+                    <input type="text" value="${data.name}" class="ex-name elite-input" placeholder="e.g. Bench Press">
+                </div>
+                <button class="remove-ex-btn" onclick="this.parentElement.parentElement.remove()">REMOVE</button>
             </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:8px;">
-                <div><label>Sets</label><input type="number" value="${data.sets}" class="ex-sets"></div>
-                <div><label>Reps</label><input type="number" value="${data.reps}" class="ex-reps"></div>
-                <div><label>kg</label><input type="number" value="${data.weight}" class="ex-weight"></div>
-                <div><label>Rest</label><input type="number" value="${data.rest}" class="ex-rest"></div>
+
+            <div style="margin-bottom:15px;">
+                <span class="input-label-elite">Muscle Group</span>
+                <select class="ex-group elite-input">
+                    ${muscleGroups.map(g => `<option ${data.group === g ? 'selected' : ''}>${g}</option>`).join('')}
+                </select>
             </div>
-            <button onclick="this.parentElement.remove()" style="background:none; border:none; color:var(--danger); font-size:0.7rem; margin-top:10px; cursor:pointer;">Remove</button>
+
+            <div class="grid-4-cols">
+                <div>
+                    <span class="input-label-elite">Sets</span>
+                    <input type="number" value="${data.sets}" class="ex-sets elite-input">
+                </div>
+                <div>
+                    <span class="input-label-elite">Reps</span>
+                    <input type="number" value="${data.reps}" class="ex-reps elite-input">
+                </div>
+                <div>
+                    <span class="input-label-elite">KG</span>
+                    <input type="number" value="${data.weight}" class="ex-weight elite-input">
+                </div>
+                <div>
+                    <span class="input-label-elite">Rest</span>
+                    <input type="number" value="${data.rest}" class="ex-rest elite-input">
+                </div>
+            </div>
         `;
         document.getElementById('editor-exercises').appendChild(div);
     }
@@ -500,3 +663,4 @@
 </script>
 </body>
 </html>
+
